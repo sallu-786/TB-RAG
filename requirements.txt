@@ -34,6 +34,7 @@ jsonschema-specifications==2023.12.1
 langchain==0.2.1
 langchain-community==0.2.1
 langchain-core==0.2.3
+langchain-huggingface==0.0.2
 langchain-text-splitters==0.2.0
 langsmith==0.1.68
 markdown-it-py==3.0.0
@@ -79,6 +80,7 @@ streamlit==1.35.0
 sympy==1.12.1
 tbb==2021.12.0
 tenacity==8.3.0
+text-generation==0.7.0
 threadpoolctl==3.5.0
 tiktoken==0.7.0
 tokenizers==0.19.1
