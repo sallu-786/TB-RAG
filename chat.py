@@ -2,8 +2,7 @@ import os
 import streamlit as st
 from dotenv import load_dotenv
 from openai import AzureOpenAI
-from pdf_handler import handle_pdf_upload, fetch_or_create_vector_db
-
+from pdf_handler import handle_pdf_upload
 
 # Ensure environment variables are set
 load_dotenv()
@@ -11,13 +10,14 @@ load_dotenv()
 # Initialize the Azure OpenAI service
 endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
 api_key = os.getenv("AZURE_OPENAI_API_KEY")
-client = AzureOpenAI()
+client = AzureOpenAI(api_version="2023-03-15-preview")
 
 USER_NAME = "user"
 ASSISTANT_NAME = "assistant"
 model = "azure_openai_app"
 
-st.title("TB Chat 007")  # Name of Application
+st.title("TB PDF-Chatbot")  # Name of Application
+st.write("Please upload your pdf file and type message")
 
 def response_chatgpt(user_msg: str, input_documents, chat_history: list = []):
     system_msg = """You are an Assistant. Answer the questions based only on the provided documents. 
@@ -44,15 +44,24 @@ def response_chatgpt(user_msg: str, input_documents, chat_history: list = []):
         )
         return response
     except Exception as e:
-        st.error(f"An error occurred: {str(e)}")
+        st.error(f"Could not find llm model: {str(e)}")
         return None
 
 def main():
     # Sidebar for PDF upload
     with st.sidebar:
         st.title('PDF Chat Loader')
-        pdf = st.file_uploader("Upload your PDF", type='pdf')
-        file_name = handle_pdf_upload(pdf)
+        pdf = st.file_uploader("Upload your PDF", accept_multiple_files=False, type='pdf')
+        send_button = st.button("Submit", key="send_button")
+        if send_button:
+            try:
+                vectordb = handle_pdf_upload(pdf)
+            except:
+                st.error("Please submit pdf file first")
+            if vectordb:
+                st.session_state.vectordb = vectordb
+ 
+
     
     if "chat_log" not in st.session_state:
         st.session_state.chat_log = []
@@ -68,25 +77,25 @@ def main():
         with st.chat_message(USER_NAME):
             st.write(user_msg)
 
-        if pdf:
-            vectordb = fetch_or_create_vector_db(pdf, file_name)
-
-            # Perform similarity search on the vector database
-            docs = vectordb.similarity_search(query=user_msg, k=3)
+        try:
+            docs = st.session_state.vectordb.similarity_search(query=user_msg, k=3)
             doc_texts = [doc.page_content for doc in docs]
+        except Exception as e:
+            st.error(f"Vector database not found: {str(e)}")
+        
+    
+        # Get the response from GPT
+        with st.spinner("Loading answer..."):
+            response = response_chatgpt(user_msg, doc_texts, chat_history=st.session_state.chat_log)
+        if response:
+            with st.chat_message(ASSISTANT_NAME):
+                assistant_msg = response.choices[0].message.content
+                assistant_response_area = st.empty()
+                assistant_response_area.write(assistant_msg)
 
-            # Get the response from GPT
-            with st.spinner("Loading answer..."):
-                response = response_chatgpt(user_msg, doc_texts, chat_history=st.session_state.chat_log)
-            if response:
-                with st.chat_message(ASSISTANT_NAME):
-                    assistant_msg = response.choices[0].message.content
-                    assistant_response_area = st.empty()
-                    assistant_response_area.write(assistant_msg)
-
-                # Add chat logs to the session
-                st.session_state.chat_log.append({"name": USER_NAME, "msg": user_msg})
-                st.session_state.chat_log.append({"name": ASSISTANT_NAME, "msg": assistant_msg})
+            # Add chat logs to the session
+            st.session_state.chat_log.append({"name": USER_NAME, "msg": user_msg})
+            st.session_state.chat_log.append({"name": ASSISTANT_NAME, "msg": assistant_msg})
 
 if __name__ == "__main__":
     main()
