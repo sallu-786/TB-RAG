@@ -9,31 +9,27 @@ import pickle
 import pandas as pd
 from langchain.embeddings import OpenAIEmbeddings
 
-# Ensure environment variables are set
-os.environ["AZURE_OPENAI_ENDPOINT"] = "https://kant-openai-copy.openai.azure.com/"
-os.environ["AZURE_OPENAI_API_KEY"] = "efcacfae66a34614b863784b8bfb3555"
-os.environ["OPENAI_API_KEY"] = "efcacfae66a34614b863784b8bfb3555"
 
-client = AzureOpenAI()      #initialize the Azure OpenAi service
+# Ensure environment variables are set-----------------------------------------------------------------
+
+os.environ["AZURE_OPENAI_ENDPOINT"] = ""
+os.environ["AZURE_OPENAI_API_KEY"] = ""
+client = AzureOpenAI()                              #initialize the Azure OpenAi service
 USER_NAME = "user"          
-ASSISTANT_NAME = "assistant"  #username
-model = "azure_openai_app"   #name of model in Auzer OpanAI service
+ASSISTANT_NAME = "assistant"                        #username
+model = "azure_openai_app"                          #name of model in Auzer OpanAI service
+st.title("TB Chat 007")                             #Name of Application
 
-st.title("TB Chat 007")  #Name of Application
+#Define Functions to be used---------------------------------------------------------------------------------------
 
-
-
-def get_pdf_text(file):                        #get all text from pdf file
+def get_pdf_text(file):                             #get all text from pdf file
     pdf_reader = PdfReader(file)
     text = ""
     for page in pdf_reader.pages:
         text += page.extract_text()
-    print("--------------------------------------------")
-    print(text)
-    print("--------------------------------------------")
     return text
 
-def get_text_chunks(text):                   #divide text into chunks
+def get_text_chunks(text):                          #divide text into chunks
     text_splitter = CharacterTextSplitter(
         separator="\n",
         chunk_size=500,
@@ -41,27 +37,18 @@ def get_text_chunks(text):                   #divide text into chunks
         length_function=len
     )
     chunks = text_splitter.split_text(text)
-    #print("--------------------------------------------")
-    # print(chunks[0])
-    # input("cont")
-    # print(chunks[1])
-    #print("--------------------------------------------")
     return chunks
 
-def create_embeddings(text_chunks):         #create vector embeddings for text chunks
 
-    # for japanese text,use this model in paranthesis of hugging face---->model_name="intfloat/multilingual-e5-base"
-    embeddings = HuggingFaceEmbeddings()#OpenAIEmbeddings()
-    sample_text="Hello this is suleman"
-    doc_result3 = embeddings.embed_documents([sample_text])
-    print(f"Length: {len(doc_result3[0])}")
-    print(f"First five elements: {doc_result3[0][:]}")
+def create_embeddings(text_chunks):                 #create vector embeddings for text chunks
 
-    input("continue")
+                                                    # for japanese text,use this model in paranthesis of hugging face--
+                                                    #---->model_name="intfloat/multilingual-e5-base"
+    embeddings = HuggingFaceEmbeddings()            #If you have Open AI API key use this OpenAIEmbeddings()
     vector_base = FAISS.from_texts(text_chunks, embeddings)   
     return vector_base
 
-def store_vector(vectors, file_name):      # store vectors as pickle file for now
+def store_vector(vectors, file_name):               # store vectors as pickle file, can also use langchain caching
     if os.path.exists(f"{file_name}.pkl"):
         with open(f"{file_name}.pkl", "rb") as f:
             vector_store = pickle.load(f)
@@ -72,26 +59,24 @@ def store_vector(vectors, file_name):      # store vectors as pickle file for no
     return vector_store
 
 
-
-
 def response_chatgpt(user_msg: str, input_documents, chat_history: list = []):
-    system_msg = """You are an Assistant. Answer the questions based only on the provided documents. If the information is not in the documents, say you don't know."""
+    system_msg = """You are an Assistant. Answer the questions based only on the provided documents. 
+                    If the information is not in the documents, say you don't know."""
     messages = [{"role": "system", "content": system_msg}]
 
-    # If there is a chat log, add it to the messages list
+                                                    # If there is a chat log, add it to the messages list
     if len(chat_history) > 0:
         for chat in chat_history:
             messages.append({"role": chat["name"], "content": chat["msg"]})
 
-    # Add user message to messages list
+                                                    # Add user message to messages list
     messages.append({"role": USER_NAME, "content": user_msg})
 
-    # Append input documents to the messages list
+                                                    # Append input documents to the messages list
     for doc in input_documents:
         messages.append({"role": "user", "content": f"Document snippet:\n{doc}"})
-    input("STOP HERE........................................................")
     try:
-        response = client.chat.completions.create(               #Azure Open Ai client called
+        response = client.chat.completions.create(  #Azure Open Ai client called
             model=model,
             messages=messages,
             temperature=0
@@ -101,7 +86,7 @@ def response_chatgpt(user_msg: str, input_documents, chat_history: list = []):
         st.error(f"An error occurred: {str(e)}")
         return None
 
-# Sidebar for PDF upload
+                                                    # Sidebar for PDF upload
 with st.sidebar:
     st.title('PDF Chat Loader')
     pdf = st.file_uploader("Upload your PDF", type='pdf')
@@ -113,7 +98,7 @@ with st.sidebar:
             st.write("File stored successfully.")
 
 
-# Initialize the session information that saves the chat log
+                                                    # Initialize the session information that saves the chat log
 if "chat_log" not in st.session_state:
     st.session_state.chat_log = []
 
@@ -128,14 +113,14 @@ if user_msg:
     with st.chat_message(USER_NAME):
         st.write(user_msg)
 
-    if pdf:                                                 # If pdf vector already exists, fetch from database
+    if pdf:                                          # If pdf vector already exists, fetch from database
         file_name = pdf.name[:-4]
         if os.path.exists(f"{file_name}.pkl"):
             with open(f"{file_name}.pkl", "rb") as f:
                 st.spinner("Fetching data from database")
                 vectordb = pickle.load(f)
              
-        else:                                              # If new pdf file then create vector db and store
+        else:                                        # If new pdf file then create vector db and store
             with st.spinner("Creating vector data"):
                 text = get_pdf_text(pdf)
                 chunks = get_text_chunks(text)
