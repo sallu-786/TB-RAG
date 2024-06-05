@@ -7,3 +7,6 @@ If you want to use it first clone the repository to your desktop
       AZURE_OPENAI_ENDPOINT= #your enpoint url from azure portal here 
       AZURE_OPENAI_API_KEY=  #Azure OpenAI api key 
 5. Thats it...nowrun the following command to run the code------>streamlit run chat.py
+
+Feel free to use this code but please give due credits..Thanks
+email: sulemanmuhammad08@gmail.com
