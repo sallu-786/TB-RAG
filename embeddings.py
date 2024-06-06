@@ -1,9 +1,9 @@
+import os
 from PyPDF2 import PdfReader
 from langchain.text_splitter import CharacterTextSplitter
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
 import pickle
-import os
 
 def get_pdf_text(file):  # get all text from pdf file
     pdf_reader = PdfReader(file)
@@ -13,7 +13,6 @@ def get_pdf_text(file):  # get all text from pdf file
         if text:
             pages.append((text, i + 1))  # store text with page number (1-based index)
     return pages
-
 
 def get_text_chunks(pages):  # divide text into chunks
     text_splitter = CharacterTextSplitter(
@@ -28,7 +27,6 @@ def get_text_chunks(pages):  # divide text into chunks
             chunks.append({"text": chunk, "page_number": page_number})
     return chunks
 
-
 def create_embeddings(text_chunks):  # create vector embeddings for text chunks
     embeddings = HuggingFaceEmbeddings()  # If you have Open AI API key use this OpenAIEmbeddings()
     texts = [chunk['text'] for chunk in text_chunks]
@@ -38,11 +36,15 @@ def create_embeddings(text_chunks):  # create vector embeddings for text chunks
 
 
 def store_vector(vectors, file_name):  # store vectors as pickle file, can also use langchain caching
-    if os.path.exists(f"{file_name}.pkl"):
-        with open(f"{file_name}.pkl", "rb") as f:
+    if not os.path.exists('vector_data'):
+        os.makedirs('vector_data')
+    file_path = os.path.join('vector_data', f"{file_name}.pkl")
+
+    if os.path.exists(file_path):
+        with open(file_path, "rb") as f:
             vector_store = pickle.load(f)
     else:
         vector_store = vectors
-        with open(f"{file_name}.pkl", "wb") as f:
+        with open(file_path, "wb") as f:
             pickle.dump(vector_store, f)
     return vector_store
