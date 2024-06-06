@@ -104,9 +104,9 @@ def main():
                     for index, source in enumerate(response["sources"], start=1):
                         page_number = source["metadata"].get('page')
                         if page_number:
-                            st.write(f"- File: {pdf_name}   Source {index} Page Number: {page_number}")
+                            st.write(f"- File: {pdf_name} ----- Page Number: {page_number}")
                         else:
-                            st.write(f"- File: {pdf_name}   Source {index} Page Number: Unavailable")
+                            st.write(f"- File: {pdf_name} ----- Page Number: Unavailable")
 
                 
 
